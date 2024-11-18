@@ -12,10 +12,33 @@ const $searchForm = $("#searchForm");
  *    (if no image URL given by API, put in a default image URL)
  */
 
-async function getShowsByTerm( /* term */) {
+async function getShowsByTerm(userTerm) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
 
-  return [
+    let response =  await axios.get('https://api.tvmaze.com/search/shows',{params: {q:userTerm}});
+    let tvData=response.data[0].show;
+    let tvImage="https://tinyurl.com/tv-missing";
+    let tvSummary="No summary available";
+    
+    if (tvData.image!=null){
+        tvImage=tvData.image.medium;
+    }
+
+    if(tvData.summary!=null){
+        tvSummary=tvData.summary;
+    }
+
+    return [
+        {
+            id: tvData.id,
+            name: tvData.name,
+            summary: tvSummary,
+            image: tvImage
+        }
+    ];
+    
+  /**************HARDCODED response ******************/
+  /*return [
     {
       id: 1767,
       name: "The Bletchley Circle",
@@ -32,7 +55,7 @@ async function getShowsByTerm( /* term */) {
       image:
         "http://static.tvmaze.com/uploads/images/medium_portrait/147/369403.jpg"
     }
-  ];
+  ];*/
 }
 
 
@@ -46,22 +69,24 @@ function populateShows(shows) {
       `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img
-              src="http://static.tvmaze.com/uploads/images/medium_portrait/160/401704.jpg"
-              alt="Bletchly Circle San Francisco"
+              src=${show.image}
+              alt=${show.name}
               class="w-25 me-3">
            <div class="media-body">
              <h5 class="text-primary">${show.name}</h5>
              <div><small>${show.summary}</small></div>
-             <button class="btn btn-outline-light btn-sm Show-getEpisodes">
+             <button class="btn btn-outline-light btn-sm Show-getEpisodes" onclick="getEpisodesOfShow(${show.id})">
                Episodes
              </button>
            </div>
          </div>
        </div>
       `);
-
     $showsList.append($show);
+    
+    
   }
+  
 }
 
 
@@ -87,8 +112,23 @@ $searchForm.on("submit", async function (evt) {
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id) {
+    let episodeList =  await axios.get(`https://api.tvmaze.com/shows/${id}/episodes`);
+    //console.log(episodeList.data)
+    populateEpisodes(episodeList.data);
+}
 
 /** Write a clear docstring for this function... */
 
-// function populateEpisodes(episodes) { }
+function populateEpisodes(episodes) {
+    $episodesArea.empty()
+
+    for(let episode of episodes){
+        const $episode=$(`
+            <li><b>${episode.name}</b> (Season ${episode.season}, Episode ${episode.number}) <small>- ID: ${episode.id}</small></li>
+            `);
+        $episodesArea.append($episode)
+    }
+    
+    $episodesArea.show();
+}
